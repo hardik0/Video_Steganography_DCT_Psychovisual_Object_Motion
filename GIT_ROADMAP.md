@@ -2,9 +2,9 @@
 
 ## Branch Structure
 
-1. **master** (V2 with GPU support)
-   - Current stable version with GPU acceleration
-   - Contains both CPU and GPU implementations
+1. **master** (V2 with CPU support)
+   - Current stable version with CPU implementation
+   - Contains optimized CPU implementation
    - Main development branch
 
 2. **v1** (CPU-only version)
@@ -12,9 +12,9 @@
    - Stable version without GPU support
    - Based on v1_improvement.md specifications
 
-3. **future** (Pure GPU version)
-   - Optimized GPU-only implementation
-   - Contains all GPU-related optimizations
+3. **future** (Hybrid CPU/GPU version)
+   - Hybrid implementation with both CPU and GPU support
+   - Contains GPU-related optimizations
    - Based on gpu_optimization_roadmap.md
 
 ## Version Details
@@ -29,9 +29,18 @@
   - `dct_operations.py`
   - `utils.py`
 
-### V2 (Hybrid CPU/GPU)
+### V2 (CPU-optimized)
 - Current master branch
-- Supports both CPU and GPU operations
+- Optimized CPU implementation
+- Key files:
+  - `steganography.py`
+  - `motion_detection.py`
+  - `dct_operations.py`
+  - `utils.py`
+
+### Future (Hybrid CPU/GPU)
+- Hybrid implementation with both CPU and GPU support
+- Optimized for both CPU and GPU performance
 - Key files:
   - `steganography.py`
   - `motion_detection.py`
@@ -40,17 +49,7 @@
   - `gpu_operations.py`
   - `gpu_test.py`
   - `gpu_performance_summary.md`
-
-### Future (GPU-optimized)
-- Pure GPU implementation
-- Optimized for GPU performance
-- Key files:
-  - `gpu_steganography.py`
-  - `gpu_motion_detection.py`
-  - `gpu_dct_operations.py`
-  - `gpu_utils.py`
   - `gpu_optimization_roadmap.md`
-  - `gpu_performance_summary.md`
 
 ## Branch Management
 
@@ -71,8 +70,8 @@ git checkout -b future
 
 ### Version Tags
 - v1.0.0 - CPU-only stable version
-- v2.0.0 - Current hybrid CPU/GPU version
-- v3.0.0 - Future GPU-optimized version
+- v2.0.0 - Current CPU-optimized version
+- v3.0.0 - Future hybrid CPU/GPU version
 
 ## Development Workflow
 
@@ -83,12 +82,12 @@ git checkout -b future
 
 2. **V2 Development**
    - Work on master branch
-   - Maintain both CPU and GPU support
-   - Regular performance testing
+   - Focus on CPU optimizations
+   - Maintain CPU performance
 
 3. **Future Development**
    - Work on future branch
-   - Focus on GPU optimizations
+   - Implement both CPU and GPU support
    - Follow gpu_optimization_roadmap.md
 
 ## Documentation
@@ -107,11 +106,12 @@ Each branch should maintain its own documentation:
    - Memory usage analysis
 
 2. **V2 Testing**
-   - Both CPU and GPU benchmarks
-   - Cross-platform compatibility
+   - CPU performance benchmarks
+   - Memory usage analysis
    - Feature parity tests
 
 3. **Future Testing**
-   - GPU performance optimization
+   - Both CPU and GPU benchmarks
+   - Cross-platform compatibility
    - Memory transfer optimization
    - Batch processing tests 
