@@ -42,7 +42,7 @@ wheels/
 # Test and analysis outputs
 comparison/
 extraction_analysis/
-performance_tests/
+# performance_tests/
 quality_analysis/
 
 # Environment files
