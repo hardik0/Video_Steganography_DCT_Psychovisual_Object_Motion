@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.fftpack import dct, idct
-import cv2
 
 def block_dct(block):
     """Apply 2D DCT to an 8x8 block"""
