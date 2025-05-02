@@ -2,7 +2,27 @@
 
 This document outlines a detailed roadmap for optimizing our GPU-accelerated video steganography system.
 
-## 1. Batch Processing Implementation
+## Current Performance Status
+
+### Test Environment
+- **GPU**: NVIDIA GeForce GTX 1660 Ti with 5.80 GB memory
+- **CUDA Version**: 12.2
+- **CuPy Version**: 13.4.1
+- **OpenCV**: 4.8.0 (with CUDA support)
+
+### Performance Metrics
+- **Embedding**: CPU (15.11s) vs GPU (19.98s), 0.76x speedup
+- **Extraction**: CPU (2.26s) vs GPU (2.93s), 0.77x speedup
+- **Quality**: Identical PSNR (58.7 dB) and bit error rates (2.56%)
+
+### Identified Bottlenecks
+1. Memory transfer overhead between CPU and GPU
+2. Small block size (8x8) operations not utilizing GPU parallelism
+3. Limited batch processing
+4. Motion detection still primarily on CPU
+5. Memory allocation overhead
+
+## 1. Batch Processing Implementation (Priority: High)
 
 ### Current Issue
 Processing individual 8x8 DCT blocks incurs significant overhead for each GPU transfer.
@@ -27,85 +47,54 @@ for i in range(0, len(frames), batch_size):
 Improve the DCT batch processing:
 
 ```python
-# Current batch implementation can be enhanced further
 def parallel_dct_batch(blocks, use_gpu=False):
     # Current implementation loops through blocks on GPU
     for i in range(len(blocks)):
         result_gpu[i] = cuda_dct(cuda_dct(batch_gpu[i].T, norm='ortho').T, norm='ortho')
     
     # Improved version - reshape to process all blocks at once
-    # This avoids Python loop overhead on GPU
     batch_shape = batch_gpu.shape
-    # Reshape to 2D array where each row is a flattened block
     reshaped = batch_gpu.reshape(batch_shape[0], -1)
-    # Process in a single operation if possible
-    # (Implementation depends on the specific DCT function capabilities)
+    # Process in a single operation
+    result = cuda_dct(reshaped, norm='ortho')
+    return result.reshape(batch_shape)
 ```
 
-## 2. Memory Optimization
+## 2. Memory Optimization (Priority: High)
 
 ### Current Issue
-Frequent data transfers between CPU and GPU memory.
+Frequent data transfers between CPU and GPU memory causing significant overhead.
 
 ### Solution: Keep Data on GPU
 Minimize transfers by keeping data on the GPU:
 
 ```python
-# Current approach
-for frame in frames:
-    # Transfer to GPU
-    frame_gpu = cp.asarray(frame)
-    # Process
-    result_gpu = process_on_gpu(frame_gpu)
-    # Transfer back to CPU
-    result = cp.asnumpy(result_gpu)
-    # Use result...
+# Improved approach with memory pooling
+class GPUMemoryPool:
+    def __init__(self):
+        self.pool = cp.get_default_memory_pool()
+        self.pinned_memory_pool = cp.get_default_pinned_memory_pool()
+    
+    def allocate(self, shape, dtype):
+        return cp.zeros(shape, dtype=dtype)
+    
+    def free(self):
+        self.pool.free_all_blocks()
+        self.pinned_memory_pool.free_all_blocks()
 
-# Improved approach
-# Transfer all frames at once (or in large batches)
-frames_gpu = cp.asarray(frames)
-results_gpu = []
-for i in range(len(frames)):
-    # Keep all intermediate results on GPU
-    result_gpu = process_on_gpu(frames_gpu[i])
-    results_gpu.append(result_gpu)
-# Transfer final results back to CPU only at the end
-results = cp.asnumpy(cp.stack(results_gpu))
+# Usage in video processing
+def process_video_gpu(video_path):
+    memory_pool = GPUMemoryPool()
+    try:
+        # Process video with optimized memory management
+        frames_gpu = cp.asarray(frames)
+        results_gpu = process_frames_batch(frames_gpu)
+        return cp.asnumpy(results_gpu)
+    finally:
+        memory_pool.free()
 ```
 
-### Solution: GPU Memory Management
-Implement proper memory management:
-
-```python
-# Free memory when not needed
-cp.get_default_memory_pool().free_all_blocks()
-
-# For large videos, implement incremental processing
-def process_large_video(video_path, output_path):
-    # Process video in chunks to avoid GPU memory overflow
-    chunk_size = 100  # frames
-    # Open video
-    cap = cv2.VideoCapture(video_path)
-    # ...
-    while True:
-        frames = []
-        for _ in range(chunk_size):
-            ret, frame = cap.read()
-            if not ret:
-                break
-            frames.append(frame)
-        
-        if not frames:
-            break
-            
-        # Process chunk
-        process_frames_on_gpu(frames)
-        
-        # Clear GPU memory after each chunk
-        cp.get_default_memory_pool().free_all_blocks()
-```
-
-## 3. Algorithm Adaptations
+## 3. Algorithm Adaptations (Priority: Medium)
 
 ### Current Issue
 Motion detection is a major bottleneck and runs primarily on CPU.
@@ -115,128 +104,87 @@ Motion detection is a major bottleneck and runs primarily on CPU.
 ```python
 def detect_motion_gpu(prev_frame, curr_frame, threshold=30):
     """GPU-accelerated motion detection between frames"""
-    if prev_frame is None or curr_frame is None:
-        return None
+    # Convert frames to GPU arrays
+    prev_gpu = cp.asarray(prev_frame)
+    curr_gpu = cp.asarray(curr_frame)
     
-    # Convert frames to grayscale if needed
-    if len(prev_frame.shape) > 2:
-        # Use GPU for color conversion if OpenCV has CUDA
-        prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-    else:
-        prev_gray = prev_frame
+    # Calculate frame difference on GPU
+    diff_gpu = cp.abs(curr_gpu - prev_gpu)
     
-    if len(curr_frame.shape) > 2:
-        curr_gray = cv2.cvtColor(curr_frame, cv2.COLOR_BGR2GRAY)
-    else:
-        curr_gray = curr_frame
+    # Apply threshold and morphological operations on GPU
+    motion_mask_gpu = cp.zeros_like(diff_gpu)
+    motion_mask_gpu[diff_gpu > threshold] = 255
     
-    # Transfer to GPU just once
-    prev_gpu = cp.asarray(prev_gray)
-    curr_gpu = cp.asarray(curr_gray)
-    
-    # Calculate absolute difference
-    frame_diff_gpu = cp.abs(curr_gpu - prev_gpu)
-    
-    # Threshold operation on GPU
-    motion_mask_gpu = cp.zeros_like(frame_diff_gpu)
-    motion_mask_gpu[frame_diff_gpu > threshold] = 255
-    
-    # Apply morphological operations (if CuPy provides this functionality)
-    # Otherwise, transfer back for this step
-    
-    return cp.asnumpy(motion_mask_gpu)
+    # Keep result on GPU for further processing
+    return motion_mask_gpu
 ```
 
-### Solution: DCT Coefficient Optimization
-Optimize DCT calculations for GPU architecture:
-
-```python
-# Current approach processes blocks individually
-# Consider using cuFFT for larger batch operations if applicable
-```
-
-## 4. OpenCV with CUDA Support
+## 4. Kernel Optimization (Priority: High)
 
 ### Current Issue
-Our OpenCV installation doesn't have CUDA support.
+Small block operations not utilizing GPU parallelism effectively.
 
-### Solution
-Install OpenCV with CUDA support:
-
-```bash
-# Example steps for building OpenCV with CUDA
-git clone https://github.com/opencv/opencv.git
-git clone https://github.com/opencv/opencv_contrib.git
-cd opencv
-mkdir build && cd build
-cmake -D CMAKE_BUILD_TYPE=RELEASE \
-      -D CMAKE_INSTALL_PREFIX=/usr/local \
-      -D WITH_CUDA=ON \
-      -D ENABLE_FAST_MATH=1 \
-      -D CUDA_FAST_MATH=1 \
-      -D WITH_CUBLAS=1 \
-      -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
-      -D OPENCV_ENABLE_NONFREE=ON \
-      ..
-make -j$(nproc)
-sudo make install
-```
-
-Then adapt our code to use OpenCV's CUDA modules:
-
+### Solution: Optimize DCT Kernel
 ```python
-# Check if OpenCV CUDA is available
-if hasattr(cv2, 'cuda') and cv2.cuda.getCudaEnabledDeviceCount() > 0:
-    # Use OpenCV CUDA functions
-    gpu_frame = cv2.cuda_GpuMat()
-    gpu_frame.upload(frame)
-    
-    # Example: CUDA-accelerated blur
-    gpu_result = cv2.cuda.blur(gpu_frame, (5, 5))
-    result = gpu_result.download()
-else:
-    # Fall back to CPU
-    result = cv2.blur(frame, (5, 5))
+@cp.fuse()
+def optimized_dct_kernel(blocks):
+    """Fused kernel for DCT operations"""
+    # Combine multiple operations into a single kernel
+    # Reduce memory access and improve parallelism
+    return cuda_dct(blocks, norm='ortho')
 ```
 
 ## 5. Implementation Strategy
 
-1. **Benchmark Current Hotspots**
-   - Profile the code to identify the most time-consuming operations
-   - Focus optimization on these areas first
+1. **Phase 1: Memory and Batch Processing**
+   - Implement memory pooling
+   - Add frame batching
+   - Optimize DCT operations
+   - Expected improvement: 1.5-2x speedup
 
-2. **Implement Incremental Changes**
-   - Start with batch processing of frames
-   - Then optimize memory transfers
-   - Finally, adapt algorithms for GPU
+2. **Phase 2: Algorithm Optimization**
+   - Move motion detection to GPU
+   - Optimize kernel operations
+   - Implement adaptive processing
+   - Expected improvement: 2-2.5x speedup
 
-3. **Continuous Testing**
-   - Test with various video sizes and resolutions
-   - Measure and compare performance after each change
+3. **Phase 3: Advanced Optimizations**
+   - Implement GPU streams for concurrent operations
+   - Add shared memory usage
+   - Optimize memory access patterns
+   - Expected improvement: 2.5-3x speedup
 
-4. **Adaptive Processing**
-   - Implement a system that dynamically chooses CPU or GPU based on workload
-   - For small videos, use CPU
-   - For large videos or batch processing, use GPU
+## 6. Performance Targets
 
-## 6. Timeline Estimation
+### Short-term Goals
+- Achieve 1.5x speedup for 720p videos
+- Reduce memory transfer overhead by 50%
+- Implement basic batch processing
 
-1. **Phase 1: Batch Processing Implementation**
-   - Estimated time: 1-2 weeks
-   - Expected outcomes: Initial performance improvement for larger videos
+### Medium-term Goals
+- Achieve 2x speedup for 720p videos
+- Implement full GPU motion detection
+- Optimize kernel operations
 
-2. **Phase 2: Memory Optimization**
-   - Estimated time: 1-2 weeks
-   - Expected outcomes: Reduced overhead, better scaling for larger videos
+### Long-term Goals
+- Achieve 2.5-3x speedup for 720p videos
+- Support 4K video processing efficiently
+- Implement adaptive CPU/GPU processing
 
-3. **Phase 3: Algorithm Adaptations**
-   - Estimated time: 2-3 weeks
-   - Expected outcomes: Significant improvement for motion detection
+## 7. Monitoring and Validation
 
-4. **Phase 4: OpenCV with CUDA Integration**
-   - Estimated time: 1-2 weeks
-   - Expected outcomes: Complete GPU acceleration pipeline
+1. **Performance Metrics**
+   - Execution time for each operation
+   - Memory transfer overhead
+   - GPU utilization
+   - Quality metrics (PSNR, bit error rate)
+
+2. **Testing Strategy**
+   - Test with various video resolutions
+   - Measure impact of each optimization
+   - Compare with CPU implementation
+   - Validate quality metrics
 
 ## Conclusion
 
-By implementing these optimizations, we expect to achieve significant performance improvements for our GPU-accelerated steganography system, particularly for higher resolution videos and batch processing scenarios. The goal is to reach at least 2-3x speedup for large videos compared to the CPU implementation. 
+The current GPU implementation shows slower performance than CPU for typical video resolutions. However, with the proposed optimizations, we expect to achieve significant performance improvements, particularly for larger videos and batch processing scenarios. The focus will be on reducing memory transfer overhead and better utilizing GPU parallelism through batch processing and kernel optimization. 

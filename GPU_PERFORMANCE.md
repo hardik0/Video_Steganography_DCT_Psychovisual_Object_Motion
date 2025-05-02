@@ -20,7 +20,7 @@ The GPU acceleration focuses on the most computationally intensive operations:
 To use GPU acceleration, the following dependencies are required:
 - NVIDIA GPU with CUDA support
 - CUDA toolkit installed
-- cupy library installed with appropriate CUDA version (e.g., `cupy-cuda11x`)
+- cupy library installed with appropriate CUDA version (e.g., `cupy-cuda12x`)
 
 ## Fallback Mechanism
 
@@ -33,38 +33,60 @@ The implementation includes robust fallback mechanisms:
 
 Based on our testing on the current system with an NVIDIA GeForce GTX 1660 Ti:
 
-```
-# GPU vs CPU Performance Comparison
+# GPU Performance Analysis
 
-## Embedding Performance
+## Test Environment
 
-| Metric                 |   CPU |   GPU | Speedup   |
-|:-----------------------|------:|------:|:----------|
-| Raw Execution Time (s) | 22.33 | 25.80 | 0.87x     |
-| Average PSNR (dB)      | 59.61 | 59.61 | +0.00     |
-| Output File Size (MB)  |  5.11 |  5.11 | 1.00x     |
+- **GPU**: NVIDIA GeForce GTX 1660 Ti with 5.80 GB memory
+- **CUDA Version**: 12.2
+- **CuPy Version**: 13.4.1
+- **OpenCV**: 4.8.0 (with CUDA support)
+- **Test Video**: 720p (1280x720) MP4 video, 2MB size
+- **Message Length**: 39 characters
 
-## Extraction Performance
+## Performance Results
 
-| Metric                 |   CPU |   GPU | Speedup   |
-|:-----------------------|------:|------:|:----------|
-| Raw Execution Time (s) |  1.78 |  2.53 | 0.70x     |
-| Bit Error Rate (%)     |  2.04 |  2.04 | +0.00     |
-```
+### Embedding Performance
+- **CPU Time**: 15.11 seconds
+- **GPU Time**: 19.98 seconds
+- **Speedup**: 0.76x (GPU is slower)
+- **PSNR**: 58.7 dB (identical for both CPU and GPU)
+- **Output Size**: 5.11 MB (identical for both CPU and GPU)
 
-**Performance Analysis:**
+### Extraction Performance
+- **CPU Time**: 2.26 seconds
+- **GPU Time**: 2.93 seconds
+- **Speedup**: 0.77x (GPU is slower)
+- **Bit Error Rate**: 2.56% (identical for both CPU and GPU)
 
-Despite having CuPy properly installed and the GPU being detected (verified through `gpu_test.py`), we're still observing that the GPU implementation is slower than the CPU implementation. This is likely due to several factors:
+## Analysis
 
-1. **Data Transfer Overhead**: There's significant overhead in transferring data between CPU and GPU memory, which is especially noticeable for smaller workloads.
+1. **Overall Performance**: The GPU implementation is currently slower than the CPU implementation for both embedding and extraction operations.
 
-2. **Small Computation Batches**: The DCT operations are performed on small 8x8 blocks, which don't fully utilize the GPU's parallel processing capabilities.
+2. **Quality Metrics**: 
+   - The PSNR values are identical between CPU and GPU implementations, indicating no quality loss
+   - The bit error rates are also identical, showing consistent extraction accuracy
 
-3. **OpenCV Limitations**: OpenCV was not built with CUDA support on this system, as confirmed by `opencv_check.py`, limiting acceleration to only CuPy operations.
+3. **Potential Optimization Areas**:
+   - Memory transfer overhead between CPU and GPU
+   - Batch processing of frames
+   - Parallel processing of DCT operations
+   - Kernel optimization for small data sizes
 
-4. **Motion Detection**: The motion detection component, which takes up to 55.8% of the processing time in embedding, still runs primarily on the CPU.
+4. **Recommendations**:
+   - Implement batch processing for frames
+   - Reduce memory transfers between CPU and GPU
+   - Profile GPU memory usage and optimize allocation
+   - Consider using shared memory for frequently accessed data
+   - Optimize kernel configurations for the specific GPU architecture
 
-For the current workload size and video resolution, the added overhead of GPU operations outweighs the potential speedup from parallel processing.
+## Next Steps
+
+1. Profile GPU memory transfers and kernel execution times
+2. Implement batch processing for frames
+3. Optimize DCT operations for GPU architecture
+4. Reduce CPU-GPU memory transfers
+5. Consider using GPU streams for concurrent operations
 
 ## Expected Performance Improvements
 
@@ -90,5 +112,5 @@ The implementation gracefully falls back to CPU processing when GPU resources ar
 
 To enable GPU acceleration, install the required dependencies:
 ```
-pip install cupy-cuda11x  # Use appropriate version for your CUDA installation
+pip install cupy-cuda12x  # Use appropriate version for your CUDA installation
 ``` 

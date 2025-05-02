@@ -120,30 +120,58 @@ def run_tests(input_video, message, format_preset="default"):
     
     # Test embedding with CPU
     print("\n=== Testing embedding with CPU ===")
-    cpu_embed_cmd = f"python embed.py {input_video} '{message}' performance_tests/cpu_stego.mp4 performance_tests/cpu_locations.pkl --format {format_preset}"
-    cpu_embed_output, cpu_embed_error, cpu_embed_time = run_command(cpu_embed_cmd, "Embedding with CPU")
-    results['cpu_embed'] = parse_performance_metrics(cpu_embed_output, "embed")
+    print("Embedding with CPU...")
+    cpu_embed_cmd = f"python3 embed.py {input_video} '{message}' performance_tests/cpu_stego.mp4 performance_tests/cpu_locations.pkl --format {format_preset}"
+    print(f"Command: {cpu_embed_cmd}")
+    cpu_embed_start = time.time()
+    cpu_embed_output = subprocess.run(cpu_embed_cmd, shell=True, capture_output=True, text=True)
+    cpu_embed_time = time.time() - cpu_embed_start
+    if cpu_embed_output.returncode != 0:
+        print(f"Error output: {cpu_embed_output.stderr}")
+        return
+    results['cpu_embed'] = parse_performance_metrics(cpu_embed_output.stdout, "embed")
     results['cpu_embed']['raw_time'] = cpu_embed_time
     
     # Test embedding with GPU
     print("\n=== Testing embedding with GPU ===")
-    gpu_embed_cmd = f"python embed_gpu.py {input_video} '{message}' performance_tests/gpu_stego.mp4 performance_tests/gpu_locations.pkl --format {format_preset}"
-    gpu_embed_output, gpu_embed_error, gpu_embed_time = run_command(gpu_embed_cmd, "Embedding with GPU")
-    results['gpu_embed'] = parse_performance_metrics(gpu_embed_output, "embed")
+    print("Embedding with GPU...")
+    gpu_embed_cmd = f"python3 embed_gpu.py {input_video} '{message}' performance_tests/gpu_stego.mp4 performance_tests/gpu_locations.pkl --format {format_preset}"
+    print(f"Command: {gpu_embed_cmd}")
+    gpu_embed_start = time.time()
+    gpu_embed_output = subprocess.run(gpu_embed_cmd, shell=True, capture_output=True, text=True)
+    gpu_embed_time = time.time() - gpu_embed_start
+    if gpu_embed_output.returncode != 0:
+        print(f"Error output: {gpu_embed_output.stderr}")
+        return
+    results['gpu_embed'] = parse_performance_metrics(gpu_embed_output.stdout, "embed")
     results['gpu_embed']['raw_time'] = gpu_embed_time
     
     # Test extraction with CPU
     print("\n=== Testing extraction with CPU ===")
-    cpu_extract_cmd = f"python extract.py performance_tests/cpu_stego.mp4 performance_tests/cpu_locations.pkl"
-    cpu_extract_output, cpu_extract_error, cpu_extract_time = run_command(cpu_extract_cmd, "Extracting with CPU")
-    results['cpu_extract'] = parse_performance_metrics(cpu_extract_output, "extract")
+    print("Extracting with CPU...")
+    cpu_extract_cmd = f"python3 extract.py performance_tests/cpu_stego.mp4 performance_tests/cpu_locations.pkl"
+    print(f"Command: {cpu_extract_cmd}")
+    cpu_extract_start = time.time()
+    cpu_extract_output = subprocess.run(cpu_extract_cmd, shell=True, capture_output=True, text=True)
+    cpu_extract_time = time.time() - cpu_extract_start
+    if cpu_extract_output.returncode != 0:
+        print(f"Error output: {cpu_extract_output.stderr}")
+        return
+    results['cpu_extract'] = parse_performance_metrics(cpu_extract_output.stdout, "extract")
     results['cpu_extract']['raw_time'] = cpu_extract_time
     
     # Test extraction with GPU
     print("\n=== Testing extraction with GPU ===")
-    gpu_extract_cmd = f"python extract_gpu.py performance_tests/gpu_stego.mp4 performance_tests/gpu_locations.pkl"
-    gpu_extract_output, gpu_extract_error, gpu_extract_time = run_command(gpu_extract_cmd, "Extracting with GPU")
-    results['gpu_extract'] = parse_performance_metrics(gpu_extract_output, "extract")
+    print("Extracting with GPU...")
+    gpu_extract_cmd = f"python3 extract_gpu.py performance_tests/gpu_stego.mp4 performance_tests/gpu_locations.pkl"
+    print(f"Command: {gpu_extract_cmd}")
+    gpu_extract_start = time.time()
+    gpu_extract_output = subprocess.run(gpu_extract_cmd, shell=True, capture_output=True, text=True)
+    gpu_extract_time = time.time() - gpu_extract_start
+    if gpu_extract_output.returncode != 0:
+        print(f"Error output: {gpu_extract_output.stderr}")
+        return
+    results['gpu_extract'] = parse_performance_metrics(gpu_extract_output.stdout, "extract")
     results['gpu_extract']['raw_time'] = gpu_extract_time
     
     # Check video sizes

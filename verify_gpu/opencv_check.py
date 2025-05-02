@@ -18,7 +18,8 @@ try:
             
             # Print device properties
             props = cv2.cuda.DeviceInfo()
-            print(f"Device name: {props.name()}")
+            # print(dir(props))            
+            # print(f"Device name: {props.name()}")
             print(f"Compute capability: {props.majorVersion()}.{props.minorVersion()}")
             print(f"Multi-processor count: {props.multiProcessorCount()}")
             print(f"Clock rate: {props.clockRate()} kHz")

@@ -3,4 +3,4 @@ numpy>=1.19.0
 scipy>=1.7.0
 matplotlib
 tabulate
-cupy-cuda11x>=11.0.0 
+cupy-cuda12x>=12.0.0 

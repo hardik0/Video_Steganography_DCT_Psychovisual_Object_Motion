@@ -21,13 +21,13 @@ numpy
 scipy
 matplotlib
 tabulate
-cupy-cuda11x  # For GPU acceleration
+cupy-cuda12x  # For GPU acceleration
 ```
 
 Install the requirements using:
 ```
 pip install opencv-python numpy scipy matplotlib tabulate
-pip install cupy-cuda11x  # Only if CUDA is available
+pip install cupy-cuda12x  # Only if CUDA is available
 ```
 
 ## Components
@@ -119,17 +119,29 @@ The performance test will:
 
 ## GPU Acceleration
 
-The GPU-accelerated implementation provides significant performance improvements, especially for larger videos:
+The GPU-accelerated implementation provides CUDA-accelerated operations for video steganography:
 
 - **Batch Processing**: Processes multiple DCT blocks in parallel
 - **Cupy Integration**: Uses Cupy library for CUDA-accelerated operations
 - **Automatic Fallback**: Falls back to CPU processing when CUDA is unavailable
 - **Performance Metrics**: Provides detailed timing statistics for different processing stages
 
+### Current Performance (NVIDIA GeForce GTX 1660 Ti)
+- **Embedding**: CPU (15.11s) vs GPU (19.98s), 0.76x speedup
+- **Extraction**: CPU (2.26s) vs GPU (2.93s), 0.77x speedup
+- **Quality**: Identical PSNR (58.7 dB) and bit error rates (2.56%)
+
+Note: GPU acceleration currently shows better performance for:
+- Larger video resolutions (4K+)
+- Longer videos with many frames
+- Batch processing scenarios
+
 To use GPU acceleration, you need:
 1. NVIDIA GPU with CUDA support
 2. CUDA toolkit installed
-3. Cupy library installed with appropriate CUDA version (e.g., `cupy-cuda11x`)
+3. Cupy library installed with appropriate CUDA version (e.g., `cupy-cuda12x`)
+
+For detailed performance analysis and optimization plans, see [GPU_PERFORMANCE.md](GPU_PERFORMANCE.md).
 
 ## Format Tests
 
