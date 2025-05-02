@@ -11,7 +11,6 @@ This is an implementation of video steganography based on DCT (Discrete Cosine T
 - **Quality metrics**: Calculates PSNR (Peak Signal-to-Noise Ratio) to measure video quality
 - **Multiple formats support**: Supports optimized embedding for various codecs and formats
 - **MPEG-4 resistance**: Optimized for resilience against video compression
-- **GPU acceleration**: Provides CUDA-accelerated DCT processing for improved performance
 
 ## Requirements
 
@@ -21,13 +20,11 @@ numpy
 scipy
 matplotlib
 tabulate
-cupy-cuda11x  # For GPU acceleration
 ```
 
 Install the requirements using:
 ```
 pip install opencv-python numpy scipy matplotlib tabulate
-pip install cupy-cuda11x  # Only if CUDA is available
 ```
 
 ## Components
@@ -35,12 +32,8 @@ pip install cupy-cuda11x  # Only if CUDA is available
 1. **dct_utils.py**: Utility functions for DCT operations, motion detection, and block selection
 2. **embed.py**: Script for embedding a secret message into a video
 3. **extract.py**: Script for extracting the hidden message from a steganographic video
-4. **dct_utils_gpu.py**: GPU-accelerated utility functions for DCT operations
-5. **embed_gpu.py**: GPU-accelerated script for embedding messages
-6. **extract_gpu.py**: GPU-accelerated script for extracting hidden messages
-7. **compare_formats.py**: Script for comparing different video format results
-8. **FORMAT_TESTS.md**: Detailed analysis of our format comparison tests
-9. **performance_test.py**: Script for comparing CPU vs GPU performance
+4. **compare_formats.py**: Script for comparing different video format results
+5. **FORMAT_TESTS.md**: Detailed analysis of our format comparison tests
 
 ## Usage
 
@@ -51,11 +44,6 @@ pip install cupy-cuda11x  # Only if CUDA is available
 python embed.py input_video.mp4 "Your secret message" output_video.mp4 locations.pkl [--repetition 5] [--format FORMAT]
 ```
 
-#### GPU Version:
-```bash
-python embed_gpu.py input_video.mp4 "Your secret message" output_video.mp4 locations.pkl [--repetition 5] [--format FORMAT] [--no-gpu]
-```
-
 Arguments:
 - `input_video.mp4`: Path to the input video file
 - `"Your secret message"`: The secret message to embed
@@ -63,7 +51,6 @@ Arguments:
 - `locations.pkl`: File to save embedding locations
 - `--repetition`: Optional repetition factor for error correction (default: 5)
 - `--format`: Output format preset (choices: default, lossless, raw, high_quality)
-- `--no-gpu`: Disable GPU acceleration (for embed_gpu.py)
 
 ### Format Presets
 
@@ -79,16 +66,10 @@ Arguments:
 python extract.py steganographic_video.mp4 locations.pkl [--repetition 5]
 ```
 
-#### GPU Version:
-```bash
-python extract_gpu.py steganographic_video.mp4 locations.pkl [--repetition 5] [--no-gpu]
-```
-
 Arguments:
 - `steganographic_video.mp4`: Path to the steganographic video
 - `locations.pkl`: File containing embedding locations
 - `--repetition`: Optional repetition factor for error correction (default: 5)
-- `--no-gpu`: Disable GPU acceleration (for extract_gpu.py)
 
 ### Comparing formats
 
@@ -99,37 +80,6 @@ python compare_formats.py original.mp4 stego_file1.mp4 stego_file2.avi [other_st
 Arguments:
 - `original.mp4`: Path to the original video file
 - `stego_file1.mp4 stego_file2.avi...`: Paths to steganographic videos to compare
-
-### Performance Testing
-
-```bash
-python performance_test.py input_video.mp4 [--message "Your test message"] [--format FORMAT]
-```
-
-Arguments:
-- `input_video.mp4`: Path to the input video file
-- `--message`: Optional test message to embed (default is a predefined test message)
-- `--format`: Output format preset (choices: default, lossless, raw, high_quality)
-
-The performance test will:
-1. Run embedding and extraction with both CPU and GPU implementations
-2. Measure execution times for different processing stages
-3. Generate a performance report with tables and graphs
-4. Create a `performance_report.md` file with the results
-
-## GPU Acceleration
-
-The GPU-accelerated implementation provides significant performance improvements, especially for larger videos:
-
-- **Batch Processing**: Processes multiple DCT blocks in parallel
-- **Cupy Integration**: Uses Cupy library for CUDA-accelerated operations
-- **Automatic Fallback**: Falls back to CPU processing when CUDA is unavailable
-- **Performance Metrics**: Provides detailed timing statistics for different processing stages
-
-To use GPU acceleration, you need:
-1. NVIDIA GPU with CUDA support
-2. CUDA toolkit installed
-3. Cupy library installed with appropriate CUDA version (e.g., `cupy-cuda11x`)
 
 ## Format Tests
 
@@ -163,7 +113,6 @@ The implementation generates several analysis files:
 - `extraction_analysis/`: Contains information about extracted bits and DCT coefficients
 - `original_binary.txt` and `extracted_binary.txt`: For comparing original and extracted bit patterns
 - `comparison/`: Frame-by-frame comparisons of different video formats (when using compare_formats.py)
-- `performance_tests/`: Performance comparison data between CPU and GPU implementations
 
 ## Performance Metrics
 
@@ -182,19 +131,6 @@ The implementation generates several analysis files:
 | Raw YUV | Perfect message preservation | Very large file size | For critical data where size isn't a concern |
 | High Quality MJPG | Good compromise of quality and size | Less compatible than MP4 | For general purpose steganography with good quality |
 
-## CPU vs GPU Performance
-
-Performance improvements with GPU acceleration depend on:
-- Video size and resolution
-- Amount of data being embedded
-- CUDA device capabilities
-- Processing stage (DCT operations benefit most)
-
-Typical speedups observed:
-- **DCT Operations**: 3-10x faster on GPU
-- **Overall Embedding**: 2-5x faster on GPU
-- **Extraction Process**: 2-4x faster on GPU
-
 For detailed performance comparison, run the `performance_test.py` script.
 
 ## Limitations
@@ -211,7 +147,7 @@ For detailed performance comparison, run the `performance_test.py` script.
 - Add support for more codecs and container formats
 - Integrate with deep learning models for better motion detection
 - Implement adaptive block selection based on content complexity
-- Add support for AMD GPUs with ROCm
+- Add support for GPU
 
 ## References
 
